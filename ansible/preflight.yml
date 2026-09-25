@@ -1,0 +1,26 @@
+---
+# Read-only remote probes. Sudo is required; no target files are created by these tasks.
+- name: Validate deployment targets without mutation
+  hosts: all
+  gather_facts: false
+  become: true
+  become_user: root
+  tasks:
+    - name: Run typed host preflight
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir + '/files/guard.py') }}"
+          - preflight
+        stdin: >-
+          {{ {'host': dd_hosts[inventory_hostname], 'environment': dd_environment,
+              'deployment': dd_deployment, 'bundle': dd_bundles[inventory_hostname],
+              'services': dd_services} | to_json }}
+      register: dd_preflight
+      changed_when: false
+      check_mode: false
+      no_log: true
+    - name: Return safe preflight summary
+      ansible.builtin.debug:
+        msg: "DD_RESULT={{ {'host': inventory_hostname, 'operation': 'preflight', 'result': dd_preflight.stdout | from_json} | to_json }}"

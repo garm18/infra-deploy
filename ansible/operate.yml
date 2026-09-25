@@ -1,0 +1,145 @@
+---
+# The controller MUST run preflight first; this entrypoint repeats it under the host lock.
+- name: Operate isolated Compose deployments
+  hosts: all
+  gather_facts: false
+  become: true
+  become_user: root
+  serial: 1
+  vars:
+    dd_runtime: "{{ dd_hosts[inventory_hostname].runtime_root }}/{{ dd_environment }}/{{ dd_deployment }}"
+    dd_payload:
+      host: "{{ dd_hosts[inventory_hostname] }}"
+      environment: "{{ dd_environment }}"
+      deployment: "{{ dd_deployment }}"
+      bundle: "{{ dd_bundles[inventory_hostname] }}"
+      services: "{{ dd_services }}"
+      operation: "{{ dd_operation }}"
+      run_id: "{{ dd_run_id }}"
+      secrets: "{{ dd_secrets | default({}) }}"
+      removed_services: "{{ dd_removed_services | default([]) }}"
+      selected: "{{ dd_selected_services | default([]) }}"
+      backup: "{{ dd_backup | default({}) }}"
+  tasks:
+    - name: Validate allowed operation
+      ansible.builtin.assert:
+        that:
+          - dd_operation in ['apply', 'status', 'logs', 'stop', 'backup', 'restore']
+          - not ansible_check_mode
+        fail_msg: Use preflight.yml for read-only planning.
+    - name: Acquire exclusive host mutation lock
+      ansible.builtin.command:
+        argv: [/usr/bin/python3, -c, "{{ lookup('ansible.builtin.file', playbook_dir + '/files/guard.py') }}", acquire]
+        stdin: "{{ dd_payload | to_json }}"
+      changed_when: true
+      no_log: true
+      when: dd_operation not in ['status', 'logs']
+    - name: Execute scoped operation and always release owned lock
+      block:
+        - name: Revalidate paths and host prerequisites under lock
+          ansible.builtin.command:
+            argv: [/usr/bin/python3, -c, "{{ lookup('ansible.builtin.file', playbook_dir + '/files/guard.py') }}", preflight]
+            stdin: "{{ dd_payload | to_json }}"
+          register: dd_host_check
+          changed_when: false
+          no_log: true
+          when: dd_operation in ['apply', 'restore']
+        - name: Install explicitly authorized Ubuntu Docker packages
+          ansible.builtin.apt:
+            name: [docker.io, docker-compose-v2]
+            state: present
+            update_cache: true
+            cache_valid_time: 3600
+          when:
+            - dd_operation in ['apply', 'restore']
+            - dd_hosts[inventory_hostname].bootstrap | default(false)
+            - (dd_host_check.stdout | from_json).bootstrap_required
+        - name: Enable Docker after authorized bootstrap
+          ansible.builtin.service:
+            name: docker
+            enabled: true
+            state: started
+          when:
+            - dd_operation in ['apply', 'restore']
+            - dd_hosts[inventory_hostname].bootstrap | default(false)
+            - (dd_host_check.stdout | from_json).bootstrap_required
+        - name: Read approved local TLS and license assets
+          ansible.builtin.set_fact:
+            dd_asset_bytes: "{{ dd_asset_bytes | default({}) | combine({item.key: lookup('ansible.builtin.file', item.value, rstrip=false) | b64encode}) }}"
+          loop: "{{ dd_bundles[inventory_hostname].asset_files | default({}) | dict2items }}"
+          no_log: true
+          when: dd_operation in ['apply', 'restore']
+        - name: Prepare protected runtime and immutable credential files
+          ansible.builtin.command:
+            argv: [/usr/bin/python3, -c, "{{ lookup('ansible.builtin.file', playbook_dir + '/files/guard.py') }}", prepare]
+            stdin: "{{ dd_payload | combine({'assets': dd_asset_bytes | default({})}) | to_json }}"
+          changed_when: true
+          no_log: true
+          when: dd_operation == 'apply'
+        - name: Reconcile Compose and wait for service readiness
+          community.docker.docker_compose_v2:
+            project_src: "{{ dd_runtime }}"
+            files: [compose.json]
+            state: present
+            pull: missing
+            remove_orphans: false
+            wait: true
+            wait_timeout: 180
+            services: "{{ dd_selected_services | default(omit, true) }}"
+          no_log: true
+          when: dd_operation == 'apply'
+        - name: Verify authenticated MinIO write read and cleanup
+          ansible.builtin.command:
+            argv:
+              - /usr/bin/python3
+              - -c
+              - "{{ lookup('ansible.builtin.file', playbook_dir + '/files/guard.py') | regex_replace('if __name__ == .__main__.:([\\s\\S]*)$', '') }}\n{{ lookup('ansible.builtin.file', playbook_dir + '/files/minio_probe.py') }}\nprint(json.dumps(minio_verify(json.load(sys.stdin))))"
+            stdin: "{{ dd_payload | to_json }}"
+          register: dd_minio_result
+          changed_when: false
+          no_log: true
+          when: dd_operation == 'apply'
+        - name: Stop selected services while preserving all data
+          community.docker.docker_compose_v2:
+            project_src: "{{ dd_runtime }}"
+            files: [compose.json]
+            state: stopped
+            services: "{{ dd_selected_services | default(omit, true) }}"
+            timeout: 120
+          no_log: true
+          when: dd_operation == 'stop'
+        - name: Run encrypted consistent backup or isolated restore
+          ansible.builtin.command:
+            argv:
+              - /usr/bin/python3
+              - -c
+              - "{{ lookup('ansible.builtin.file', playbook_dir + '/files/guard.py') | regex_replace('if __name__ == .__main__.:([\\s\\S]*)$', '') }}\n{{ lookup('ansible.builtin.file', playbook_dir + '/files/minio_probe.py') }}\n{{ lookup('ansible.builtin.file', playbook_dir + '/files/backup.py') }}"
+            stdin: "{{ dd_payload | combine({'assets': dd_asset_bytes | default({})}) | to_json }}"
+          register: dd_backup_result
+          changed_when: true
+          no_log: true
+          when: dd_operation in ['backup', 'restore']
+        - name: Collect redacted operational result
+          ansible.builtin.command:
+            argv: [/usr/bin/python3, -c, "{{ lookup('ansible.builtin.file', playbook_dir + '/files/guard.py') }}", report]
+            stdin: "{{ dd_payload | to_json }}"
+          register: dd_report
+          changed_when: false
+          no_log: true
+          when: dd_operation not in ['backup', 'restore']
+        - name: Require healthy services after apply
+          ansible.builtin.assert:
+            that: (dd_report.stdout | from_json).healthy
+            fail_msg: Runtime readiness failed; inspect protected host logs.
+          when: dd_operation == 'apply'
+        - name: Return safe operation summary
+          ansible.builtin.debug:
+            msg: "DD_RESULT={{ {'host': inventory_hostname, 'operation': dd_operation, 'minio_verification': ((dd_minio_result.stdout | from_json) if dd_operation == 'apply' else {}), 'result': (dd_backup_result.stdout if dd_operation in ['backup', 'restore'] else dd_report.stdout) | from_json} | to_json }}"
+      always:
+        - name: Release only this operation's host lock
+          ansible.builtin.command:
+            argv: [/usr/bin/python3, -c, "{{ lookup('ansible.builtin.file', playbook_dir + '/files/guard.py') }}", release]
+            stdin: "{{ dd_payload | to_json }}"
+          changed_when: true
+          no_log: true
+          when: dd_operation not in ['status', 'logs']

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "release_status": "requires-operator-evidence",
+  "image_policy": "Every service requires repository:version@sha256:digest and release evidence; no production digest is invented here.",
+  "services": [
+    {"kind":"postgres","repository":"postgres","ports":[5432],"secrets":["password","root_password"],"data_path":"/var/lib/postgresql/data/pgdata","required_tools":["sh","psql"],"backup":"pg_dump custom format; roles separately"},
+    {"kind":"mariadb","repository":"mariadb","ports":[3306],"secrets":["password","root_password"],"data_path":"/var/lib/mysql","required_tools":["sh","mariadb","mariadb-dump"],"backup":"mariadb-dump transaction-consistent logical backup"},
+    {"kind":"redis","repository":"redis","ports":[6379],"secrets":["password"],"data_path":"/data","required_tools":["sh","sha256sum","redis-cli"],"backup":"consistent RDB snapshot; AOF enabled"},
+    {"kind":"minio","repository":"quay.io/minio/aistor/minio","ports":[9000,9001],"secrets":["root_user","root_password"],"license":"operator-supplied AIStor Free","data_path":"/data","required_tools":["curl"],"backup":"object versions plus IAM/config metadata using tested mc workflow"},
+    {"kind":"nginx","repository":"nginx","ports":[8443],"required_tools":["nginx"],"backup":"configuration only"},
+    {"kind":"apache","repository":"httpd","ports":[8443],"required_tools":["httpd"],"backup":"configuration only"},
+    {"kind":"phpmyadmin","repository":"phpmyadmin","ports":[80],"required_tools":["php"],"backup":"stateless"},
+    {"kind":"laravel-web","repository":null,"ports":[8443],"required_tools":["nginx"],"image_contract":"Nginx compatible; matching release public tree at /usr/share/nginx/html; UID101","backup":"shared uploads included with PHP recovery set"},
+    {"kind":"laravel-php","repository":null,"ports":[9000],"required_tools":["php","php-fpm","cgi-fcgi","sh"],"image_contract":"/var/www/html immutable app and vendor; PHP pcntl; configured extensions; UID1000; built writable storage subdirectories","backup":"database + uploads + sessions + APP_KEY recovery set"},
+    {"kind":"laravel-worker","repository":null,"ports":[],"required_tools":["php"],"image_contract":"same PHP digest/release; pcntl; graceful job completion; queue retry_after > timeout","backup":"same recovery set as PHP"},
+    {"kind":"laravel-scheduler","repository":null,"ports":[],"required_tools":["php"],"image_contract":"same PHP digest/release; singleton schedule:work; pcntl","backup":"same recovery set as PHP"}
+  ]
+}
