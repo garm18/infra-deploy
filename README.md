@@ -1,5 +1,8 @@
 # Dynamic Deployment
 
+Stack `makefile-devops` kini berada di `infrastructure/`. Gunakan satu Makefile
+utama; lihat [panduan integrasi Make dan Ansible](docs/integration.md).
+
 Deploy layanan Docker Compose dengan alur aman dan mudah:
 
 ```text
@@ -9,8 +12,7 @@ Wizard → Validate → Secrets → Plan → Apply → Status
 Layanan yang tersedia: PostgreSQL, MariaDB, Redis, MinIO AIStor, Nginx, Apache, phpMyAdmin, dan profil Laravel.
 
 Untuk automation bertahap, mulai dari [panduan Makefile dan contoh direktori](docs/automation.md).
-Jalankan `make help` dari folder ini. Tahap pertama berfokus pada Makefile;
-penyempurnaan Ansible menjadi tahap berikutnya.
+Jalankan `make help` dari folder ini. Make memakai controller Ansible existing; stack shared juga memiliki entrypoint Ansible tersendiri.
 
 Hasil audit dan gate keamanan sebelum staging/production tersedia di
 [security best practices](docs/security-best-practices.md).

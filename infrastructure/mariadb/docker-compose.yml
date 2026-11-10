@@ -1,0 +1,36 @@
+# MariaDB service. Initial database credentials are read from .env.
+
+services:
+  mariadb:
+    image: mariadb:11
+    container_name: mariadb
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 60s
+    env_file:
+      - .env # Database credentials and initial database settings.
+    environment:
+      TZ: ${TZ:-Asia/Jakarta}
+    command:
+      - "--character-set-server=utf8mb4" # Use UTF-8 for new databases and tables.
+      - "--collation-server=utf8mb4_unicode_ci"
+    volumes:
+      - /mnt/data/mariadb:/var/lib/mysql # Persistent database data on the host.
+    networks:
+      - shared-network # Shared network for application containers.
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"] # Wait until MariaDB accepts connections.
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+networks:
+  shared-network:
+    external: true # Created once and shared by all infrastructure services.

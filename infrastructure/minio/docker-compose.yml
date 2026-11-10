@@ -1,0 +1,44 @@
+# MinIO Community release with the legacy full Console GUI.
+# proxy-nginx handles external API and Console access.
+services:
+  minio-storage:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: app-minio
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - .env # MinIO administrator credentials and Console settings.
+    environment:
+      TZ: ${TZ:-Asia/Jakarta}
+    command:
+      - server # Serve S3 on 9000 and the Console on 9001.
+      - /data
+      - --console-address
+      - ":9001"
+    expose:
+      - "9000" # Internal S3 API and Console ports.
+      - "9001"
+    volumes:
+      - type: bind
+        source: ${MINIO_DATA_DIR:-/mnt/data/minio} # Persistent object data on the host.
+        target: /data
+        bind:
+          create_host_path: false
+    networks:
+      - shared-network # Shared network for application containers.
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"] # Wait until MinIO is ready to receive requests.
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    stop_grace_period: 60s
+
+networks:
+  shared-network:
+    external: true # Created once and shared by all infrastructure services.

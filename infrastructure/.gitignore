@@ -1,0 +1,135 @@
+# ============================================================
+# Environment / Secrets
+# ============================================================
+.env
+.env.*
+!.env.example
+
+**/.env
+**/.env.*
+!**/.env.example
+
+**/secrets/
+**/ssl/*
+!**/ssl/.gitkeep
+
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
+**/*.pfx
+**/*.license
+
+
+# ============================================================
+# Laravel / PHP
+# ============================================================
+/vendor/
+
+# Laravel runtime
+/storage/*.key
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+
+# Keep required directories
+!/storage/framework/cache/.gitignore
+!/storage/framework/sessions/.gitignore
+!/storage/framework/views/.gitignore
+!/storage/logs/.gitignore
+
+# Laravel generated cache
+/bootstrap/cache/*.php
+!/bootstrap/cache/.gitignore
+
+.phpunit.result.cache
+.phpunit.cache/
+.phpunit.cache
+.php-cs-fixer.cache
+
+
+# ============================================================
+# Node.js / Nuxt / Vite
+# ============================================================
+node_modules/
+**/node_modules/
+
+.nuxt/
+**/.nuxt/
+
+.output/
+**/.output/
+
+dist/
+**/dist/
+
+.vite/
+**/.vite/
+
+.nitro/
+**/.nitro/
+
+.cache/
+**/.cache/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# ============================================================
+# Database / Backup / Runtime Data
+# ============================================================
+**/data/
+**/logs/
+
+**/*.sql
+**/*.sql.gz
+**/*.dump
+**/*.backup
+
+**/*.tar
+**/*.tar.gz
+**/*.zip
+
+
+# ============================================================
+# Testing / Coverage
+# ============================================================
+.coverage
+coverage/
+**/coverage/
+
+.phpunit.result.cache
+
+
+# ============================================================
+# IDE / Editor
+# ============================================================
+.idea/
+.vscode/
+
+*.swp
+*.swo
+*.tmp
+*~
+
+.DS_Store
+Thumbs.db
+
+
+# ============================================================
+# Python / Tools
+# ============================================================
+.tools/
+__pycache__/
+*.py[cod]
+
+
+# ============================================================
+# Docker local overrides
+# ============================================================
+docker-compose.override.yml
+compose.override.yml

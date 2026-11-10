@@ -1,0 +1,6 @@
+# Local-only override. Combine with docker-compose.yml.
+services:
+  proxy-nginx:
+    ports: !override # Bind only to this machine during local development.
+      - "127.0.0.1:8080:80"
+      - "127.0.0.1:8443:443"

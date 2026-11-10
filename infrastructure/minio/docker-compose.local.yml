@@ -1,0 +1,12 @@
+# Local-only override. It replaces the production bind mount with disposable data.
+services:
+  minio-storage:
+    volumes:
+      - minio-data-local:/data # Disposable object data for local development.
+    ports:
+      - "127.0.0.1:9000:9000" # Bind the S3 API and Console only to this machine.
+      - "127.0.0.1:9001:9001"
+
+volumes:
+  minio-data-local:
+    name: minio-local-data # Docker-managed storage used only by the local override.

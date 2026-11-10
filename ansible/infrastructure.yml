@@ -1,0 +1,46 @@
+---
+- name: Operate existing infrastructure through the shared manager
+  hosts: infrastructure
+  gather_facts: false
+  become: true
+  become_user: root
+  serial: 1
+  any_errors_fatal: true
+  tasks:
+    - name: Validate explicit infrastructure target
+      ansible.builtin.assert:
+        that:
+          - infra_environment in ['local', 'staging', 'production']
+          - infra_root is match('^/[A-Za-z0-9_./-]+$')
+          - "'..' not in infra_root.split('/')"
+          - infra_services is sequence and infra_services is not string
+          - infra_services | length > 0
+          - infra_services | difference(['postgres', 'mariadb', 'redis', 'minio', 'apache', 'proxy-nginx']) | length == 0
+          - infra_action | default('check') in ['check', 'config', 'ps', 'up']
+        fail_msg: Supply infra_environment, infra_root and infra_services; action defaults to check.
+    - name: Inspect installed manager
+      ansible.builtin.stat:
+        path: "{{ infra_root }}/scripts/manage.py"
+      register: infra_manager
+    - name: Require the reviewed infrastructure checkout on target
+      ansible.builtin.assert:
+        that:
+          - infra_manager.stat.isreg | default(false)
+        fail_msg: Install the reviewed infrastructure checkout and host-specific secrets before operating it.
+    - name: Run shared infrastructure manager
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - "{{ infra_root }}/scripts/manage.py"
+          - "{{ infra_action | default('check') }}"
+        chdir: "{{ infra_root }}"
+      environment:
+        ENV: "{{ infra_environment }}"
+        SERVICES: "{{ infra_services | join(' ') }}"
+      register: infra_result
+      changed_when: infra_action | default('check') == 'up'
+      no_log: true
+      when: not ansible_check_mode
+    - name: Report completed infrastructure operation
+      ansible.builtin.debug:
+        msg: "Infrastructure {{ infra_action | default('check') }} completed; check mode validates inputs only."

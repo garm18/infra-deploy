@@ -1,0 +1,5 @@
+# Local-only override. Combine with docker-compose.yml.
+services:
+  proxy-apache:
+    ports: !override # Bind only to this machine during local development.
+      - "127.0.0.1:8081:80"

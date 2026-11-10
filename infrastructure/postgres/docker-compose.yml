@@ -1,0 +1,41 @@
+# PostgreSQL service. Initial database credentials are read from .env.
+
+services:
+  postgres:
+    build:
+      context: . # Build PostgreSQL with the extensions defined in Dockerfile.
+      dockerfile: Dockerfile
+    container_name: postgres
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 60s
+    env_file:
+      - .env # Database credentials and initial database settings.
+    environment:
+      TZ: ${TZ:-Asia/Jakarta}
+    volumes:
+      # Docker Desktop cannot initialize PostgreSQL safely on a Windows drvfs
+      # bind mount because initdb requires POSIX chmod semantics.
+      - postgres-career-data:/var/lib/postgresql/data
+    networks:
+      - shared-network # Shared network for application containers.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""] # Wait until PostgreSQL accepts connections.
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+networks:
+  shared-network:
+    external: true # Created once and shared by all infrastructure services.
+
+volumes:
+  postgres-career-data:
+    name: postgres-career-data

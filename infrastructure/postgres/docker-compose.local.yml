@@ -1,0 +1,12 @@
+# Merge with docker-compose.yml. Credentials and PostgreSQL image still come from .env.
+# The matching volume target replaces the production data mount.
+services:
+  postgres:
+    volumes:
+      - pgdata:/var/lib/postgresql/data # Disposable database data for local development.
+    ports:
+      - "127.0.0.1:5432:5432" # Bind only to this machine during local development.
+
+volumes:
+  pgdata:
+    name: postgres-local-pgdata # Docker-managed storage used only by the local override.

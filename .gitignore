@@ -1,15 +1,61 @@
-.state/
-.reports/
+# Controller state and operator-specific configuration
+/.state/
+/.reports/
+/deployments/
+/inventories/
+
+# Python environments, caches and generated output
 .venv/
+venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
-build/
-dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+/build/
+/dist/
+.tools/
+
+# Credentials and local environment files
 .env
 .env.*
+!.env.example
+!.env.*.example
 *.vault.yml
+*.vault.yaml
 *.pem
 *.key
-deployments/
-inventories/
+*.p12
+*.pfx
+*.license
+*.crt
+*.cer
+id_rsa
+id_ed25519
+.vault-password*
+.vault_password*
+
+# Infrastructure storage, logs, backups and source archive
+/infrastructure/**/data/
+/infrastructure/**/logs/
+/infrastructure/**/ssl/*
+!/infrastructure/**/ssl/.gitkeep
+/infrastructure/**/*.zip
+/infrastructure/**/*.sql
+/infrastructure/**/*.sql.gz
+/infrastructure/**/*.dump
+/infrastructure/**/*.backup
+*.log
+*.retry
+
+# Workstation files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

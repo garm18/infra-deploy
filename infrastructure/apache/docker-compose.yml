@@ -1,0 +1,35 @@
+# Apache reverse proxy. Active virtual hosts are loaded from sites-enabled/.
+services:
+  proxy-apache:
+    image: httpd:2.4.68-alpine
+    container_name: proxy-apache
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    ports:
+      - "8081:80" # Public HTTP endpoint.
+    volumes:
+      - ./httpd.conf:/usr/local/apache2/conf/httpd.conf:ro # Main configuration, active sites, health endpoint, and TLS files.
+      - ./sites-available:/usr/local/apache2/conf/sites-available:ro
+      - ./sites-enabled:/usr/local/apache2/conf/sites-enabled:ro
+      - ./health:/usr/local/apache2/health:ro
+      - ./ssl:/usr/local/apache2/conf/ssl:ro
+    networks:
+      - shared-network # Shared network for application containers.
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8083/healthz"] # Internal health endpoint used by Docker.
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+networks:
+  shared-network:
+    external: true # Created once and shared by all infrastructure services.

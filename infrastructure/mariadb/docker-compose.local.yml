@@ -1,0 +1,11 @@
+# Merge with docker-compose.yml. Credentials still come from .env.
+# The matching volume target replaces the production data mount.
+services:
+  mariadb:
+    volumes:
+      - mariadb-data-local:/var/lib/mysql # Disposable database data for local development.
+    ports:
+      - "127.0.0.1:3306:3306" # Bind only to this machine during local development.
+
+volumes:
+  mariadb-data-local:

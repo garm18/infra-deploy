@@ -1,6 +1,11 @@
 # One target performs one action. No implicit installation or deployment.
 .DEFAULT_GOAL := help
 SHELL := /bin/sh
+.DELETE_ON_ERROR:
+.SUFFIXES:
+.NOTPARALLEL:
+MAKEFLAGS += --no-builtin-rules
+# References: makefile-generator/docs/patterns-guide.md and security-guide.md
 
 DD_PYTHON ?= python3
 export DD_PYTHON CONFIG PLAN ENVIRONMENT DEPLOYMENT HOST SERVICE CONFIRM
@@ -11,6 +16,9 @@ export STATE_DIR VAULT_PASSWORD_FILE
 help:
 	@printf '%s\n' \
 	  'Dynamic Deployment — jalankan satu langkah setiap kali:' \
+	  '  make infra-help                      Stack infrastructure existing' \
+	  '  make infra-up ENV=local SERVICES=redis' \
+	  '  make infra-ansible INVENTORY=/path/hosts INFRA_VARS=/path/vars.yml'  \
 	  '  make doctor                          Periksa kebutuhan controller' \
 	  '  make catalog                         Lihat layanan yang tersedia' \
 	  '  make wizard CONFIG=configs/demo.yml  Buat konfigurasi interaktif' \
@@ -73,3 +81,12 @@ test:
 coverage:
 	@PYTHONPATH="$$PWD/src$${PYTHONPATH:+:$$PYTHONPATH}" PYTHONDONTWRITEBYTECODE=1 \
 	  "$$DD_PYTHON" scripts/measure_coverage.py --minimum 80
+
+.PHONY: infra-help infra-init infra-check infra-config infra-network infra-build infra-pull infra-up infra-deploy infra-ps infra-logs infra-stop infra-down infra-test infra-ansible
+infra-help infra-init infra-check infra-config infra-network infra-build infra-pull infra-up infra-deploy infra-ps infra-logs infra-stop infra-down infra-test:
+	@$(MAKE) --no-print-directory -C infrastructure $(patsubst infra-%,%,$@)
+
+export INVENTORY INFRA_VARS
+infra-ansible:
+	@test -n "$${INVENTORY:-}" && test -n "$${INFRA_VARS:-}" || { printf '%s\n' 'Isi INVENTORY dan INFRA_VARS (lihat docs/integration.md)' >&2; exit 2; }
+	@ANSIBLE_CONFIG="$$PWD/ansible/ansible.cfg" ansible-playbook -i "$$INVENTORY" ansible/infrastructure.yml -e "@$$INFRA_VARS"

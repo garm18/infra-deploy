@@ -1,0 +1,36 @@
+# Redis cache. Applications connect through shared-network using redis:6379.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 60s
+    env_file:
+      - .env # Cache password and eviction settings.
+    environment:
+      TZ: ${TZ:-Asia/Jakarta}
+    entrypoint: ["/bin/sh", "/usr/local/bin/start-redis.sh"] # Apply validated cache settings before Redis starts.
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,mode=1777 # Temporary runtime files; cache data is intentionally not persisted.
+    volumes:
+      - ./start-redis.sh:/usr/local/bin/start-redis.sh:ro # Read-only startup script.
+    networks:
+      - shared-network # Shared network for application containers.
+    healthcheck:
+      test: ["CMD-SHELL", "test \"$$(REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli --raw ping)\" = PONG"] # Verify authenticated Redis access.
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+networks:
+  shared-network:
+    external: true # Created once and shared by all infrastructure services.

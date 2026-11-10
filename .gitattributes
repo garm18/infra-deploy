@@ -1,0 +1,47 @@
+# Shell, Make, Docker and Ansible files use LF on Windows and Linux.
+* text=auto eol=lf
+Makefile text eol=lf
+*.mk text eol=lf
+Dockerfile* text eol=lf
+.dockerignore text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.conf text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+.env* text eol=lf
+
+# Windows command launchers require CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Preserve binary artifacts without text conversion or textual diffs.
+*.zip binary
+*.gz binary
+*.tar binary
+*.7z binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.dump binary
+*.backup binary
+*.p12 binary
+*.pfx binary
+*.pem binary
+*.key binary
+*.crt binary
+*.cer binary
+*.license binary
