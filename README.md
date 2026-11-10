@@ -49,7 +49,9 @@ Hasil audit dan gate keamanan sebelum staging/production tersedia di
 
 ## Daftar isi
 
+- [Mulai dari komputer baru](#mulai-dari-komputer-baru)
 - [Prasyarat](#prasyarat)
+- [Cara menjawab wizard](#cara-menjawab-wizard)
 - [Quick start: local PostgreSQL](#quick-start-local-postgresql)
 - [Perbedaan environment](#perbedaan-environment)
 - [Staging](#staging)
@@ -61,6 +63,105 @@ Hasil audit dan gate keamanan sebelum staging/production tersedia di
 - [Aturan keamanan](#aturan-keamanan)
 
 ---
+
+## Mulai dari komputer baru
+
+Clone diperlukan jika source belum ada di komputer controller. Jika folder proyek
+sudah tersedia, masuk ke folder itu; tidak perlu clone ulang. Controller adalah
+komputer Linux/WSL yang menjalankan Make dan Ansible. Server tujuan adalah mesin
+yang akan menjalankan container; keduanya dapat berupa mesin yang sama untuk tes.
+
+### 1. Ambil source
+
+Pastikan Git dan akses repository tersedia. Remote yang dikonfigurasi proyek ini
+adalah `git@github.com:garm18/infra-deploy.git`. Untuk clone SSH, akun Anda perlu
+akses repository dan SSH key GitHub yang sudah disiapkan.
+
+```bash
+mkdir -p ~/projects
+cd ~/projects
+git clone git@github.com:garm18/infra-deploy.git dynamic_deployment
+cd dynamic_deployment
+```
+
+Alternatif HTTPS bila akses akun menggunakannya:
+
+```bash
+git clone https://github.com/garm18/infra-deploy.git dynamic_deployment
+cd dynamic_deployment
+```
+
+Pilih salah satu cara clone. Jangan menjalankan keduanya pada folder yang sama.
+Checkout harus berisi `Makefile`, `setup.sh`, `requirements.txt`, `ansible/` dan
+`infrastructure/`. Perubahan lokal workspace baru tersedia bagi pengguna lain
+setelah maintainer melakukan commit dan push; remote di atas belum diverifikasi
+memuat seluruh perubahan sesi ini.
+
+### 2. Siapkan controller
+
+Gunakan Linux atau WSL, GNU Make, Bash, Python >=3.12 dengan venv/pip, OpenSSH
+client dan OpenSSL. Pasang paket melalui package manager OS bila belum tersedia.
+Kemudian, dari root repository:
+
+```bash
+python3 -m venv ~/.venvs/dynamic-deployment
+source ~/.venvs/dynamic-deployment/bin/activate
+python -m pip install -r requirements.txt
+python -m pip install ansible-core
+ansible-galaxy collection install -r ansible/requirements.yml
+export DD_PYTHON="$VIRTUAL_ENV/bin/python"
+make help
+make doctor
+```
+
+Instalasi dependency memerlukan internet atau mirror internal. Jika `venv` gagal,
+siapkan paket venv/pip untuk versi Python Anda terlebih dahulu. Pada terminal baru,
+aktifkan virtualenv dan set DD_PYTHON kembali sebelum menjalankan perintah.
+
+### 3. Siapkan host container
+
+Docker Engine dan plugin Compose harus tersedia pada host yang menjalankan
+container. Stack existing memerlukan Compose >=2.24.4. Docker lokal dibutuhkan
+untuk tes local dan operasi `infra-*` yang diarahkan ke daemon lokal. Untuk host
+remote siapkan SSH, known_hosts, sudo, mount data serta firewall sesuai konfigurasi.
+Wizard memiliki pilihan bootstrap Docker untuk host remote; tetap review
+prasyarat host dan kebijakan paket sebelum mengaktifkannya.
+
+```bash
+# Pada host container yang Anda siapkan:
+docker version
+docker compose version
+docker info
+```
+
+### 4. Pilih alur dan mulai
+
+Untuk deployment baru, buat konfigurasi melalui wizard berikut. Ini belum
+menjalankan container:
+
+```bash
+mkdir -p ~/deployment-configs
+make wizard CONFIG="$HOME/deployment-configs/development.json"
+make validate CONFIG="$HOME/deployment-configs/development.json"
+```
+
+Ikuti [cara menjawab wizard](#cara-menjawab-wizard), lalu langkah Vault, plan dan
+apply pada [quick start PostgreSQL](#quick-start-local-postgresql). Contoh path
+`/mnt/d/testing` pada quick start adalah pilihan workstation WSL; Anda boleh
+menggantinya dengan `~/deployment-configs` yang dibuat di atas.
+
+Untuk stack shared existing, gunakan alur berbeda:
+
+```bash
+make infra-init SERVICES="postgres redis"
+# Edit infrastructure/postgres/.env dan infrastructure/redis/.env secara privat.
+make infra-check ENV=local SERVICES="postgres redis"
+make infra-up ENV=local SERVICES="postgres redis"
+```
+
+`infra-init` tidak mengisi credential valid dan tidak menimpa file existing.
+Pengguna baru hasil clone perlu menyediakan .env, certificate, license dan aset
+host yang diperlukan sendiri karena file tersebut diabaikan Git.
 
 ## Prasyarat
 
@@ -103,6 +204,57 @@ Pastikan output `doctor` menampilkan nilai `true` untuk:
 
 > [!IMPORTANT]
 > Jangan menyimpan SSH private key atau Vault password file di `/mnt/d`. Mount Windows tidak menyimpan permission Linux `0600` dengan benar sehingga controller akan menolaknya. File konfigurasi boleh disimpan di `/mnt/d` karena tidak memuat nilai secret.
+
+---
+
+## Cara menjawab wizard
+
+Wizard sudah tersedia di kode. Kedua perintah berikut setara; pilih satu:
+
+```bash
+make wizard CONFIG="$HOME/deployment-configs/development.json"
+# Atau:
+bash setup.sh wizard --output "$HOME/deployment-configs/development.json"
+```
+
+Jawaban perlu mengikuti format pertanyaan, tetapi nama/path tidak harus menyalin
+contoh README. Validasi konfigurasi akhir tetap ketat untuk mencegah target salah.
+
+| Pertanyaan | Aturan jawaban | Contoh |
+| --- | --- | --- |
+| Environment | Persis salah satu nilai huruf kecil | `development`, `staging`, `production` |
+| Deployment name dan Host ID | Mulai huruf kecil; huruf kecil, angka, tanda minus; maksimal 40 karakter | `team-app`, `db-01` |
+| Connection mode | Persis salah satu pilihan | `local`, `ssh-key`, `ssh-agent`, `ssh-password` |
+| Pilihan layanan | Nomor dipisahkan spasi, bukan koma; lihat daftar di terminal | `1 3` untuk PostgreSQL dan Redis pada daftar saat ini |
+| Image layanan standar | Versi yang diuji, bukan latest; wizard me-resolve digest melalui registry | `postgres:16.8` hanya contoh format |
+| Image Laravel | Image hasil build tim dengan tag dan digest nyata | Isi referensi hasil build Anda |
+| Dependency | ID layanan yang ditampilkan, bukan nama bebas | Pilih ID provider yang tersedia |
+| Path file | Lokasi file milik Anda; `~` diperluas oleh wizard | `~/.local/share/dynamic-deployment/demo.vault.yml` |
+| Pertanyaan y/n | `y`, `yes`, `ya` berarti setuju; gunakan `n` untuk menolak | `y` atau `n` |
+
+Enter mempertahankan nilai dalam `[ ... ]`. Tanpa default, jawaban kosong tetap
+kosong dan dapat ditolak bila wajib. Spasi di awal/akhir dibuang; nilai pilihan
+seperti environment tidak otomatis diubah menjadi huruf kecil. Pada pertanyaan
+y/n, input lain saat ini dianggap tidak, sehingga gunakan jawaban yang jelas.
+Ketik `cancel` atau `batal`, atau tekan Ctrl+C untuk membatalkan.
+
+Pemilihan `-` pada daftar layanan menonaktifkan semuanya untuk host tersebut;
+ini bukan pilihan untuk pemula yang sedang menyiapkan layanan pertama. Nilai
+layanan yang sudah tersimpan dapat dipakai kembali saat mengedit konfigurasi.
+
+File output baru ditulis setelah konfigurasi lolos validasi akhir. Wizard bukan
+perintah deploy: lanjutkan dengan validate, secrets-init, plan, lalu apply.
+Jika file sudah ada, perintah biasa menolak menimpanya. Untuk mengedit file
+existing, backup konfigurasi terlebih dahulu, lalu gunakan opsi CLI eksplisit:
+
+```bash
+bash setup.sh wizard --output "$HOME/deployment-configs/development.json" --force
+```
+
+`--force` belum memiliki parameter pada target `make wizard`; gunakan CLI di atas.
+Nilai lama dibaca sebagai default, tetapi tetap review hasil sebelum plan/apply.
+Jangan menganggap semua kesalahan akan ditanyakan ulang: beberapa input tidak
+valid menghentikan wizard dengan error dan perlu diperbaiki saat menjalankan ulang.
 
 ---
 
