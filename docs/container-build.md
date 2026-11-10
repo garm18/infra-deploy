@@ -1,5 +1,11 @@
 # Build Laravel yang wajib divalidasi dengan aplikasi aktual
 
+[Beranda](../README.md) · [Indeks dokumentasi](README.md)
+
+Panduan ini untuk pengembang yang membangun image Laravel. Baca kontrak runtime
+sebelum memilih base image; hasil build kemudian dipakai pada konfigurasi dynamic.
+Untuk menjalankan database/proxy existing, gunakan [quick start infrastructure](../infrastructure/QUICKSTART.md).
+
 Template `templates/laravel` adalah titik awal PHP-FPM + Nginx, bukan image aplikasi
 siap production. Salin Dockerfile, `.dockerignore`, dan direktori `docker/` ke root
 source aplikasi. Sesuaikan versi PHP/extension dari composer.lock, bukan upgrade

@@ -1,5 +1,11 @@
 # Perintah harian
 
+[Beranda](../README.md) · [Indeks dokumentasi](../docs/README.md)
+
+Pilihan lebih mudah: jalankan dari root `dynamic_deployment/` dengan target
+`make infra-help`, `make infra-check` dan `make infra-up`. Perintah pendek tanpa
+prefix di bawah khusus untuk direktori `infrastructure/`; pilih satu cara secara konsisten.
+
 Untuk entrypoint utama lihat ../docs/integration.md. Perintah tanpa prefix di bawah
 dijalankan dari folder dynamic_deployment/infrastructure. Make membutuhkan GNU Make dan Bash; Python 3
 serta Docker Compose >=2.24.4 dibutuhkan untuk operasi container.

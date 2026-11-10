@@ -1,4 +1,6 @@
-# Internal implementation contract
+# Kontrak internal controller dan Ansible
+
+[Beranda](../README.md) · [Indeks dokumentasi](README.md)
 
 This document coordinates the Python controller and Ansible executor. User instructions are in README.md. No live host credentials or fabricated image digests are shipped as deployable examples.
 
@@ -24,15 +26,39 @@ Production keys: owner,rpo_minutes,rto_minutes,backup_destination,backup_schedul
 
 `render.render_host(config: dict, host_id: str) -> dict`: returns `{compose: dict, files: {relative_path: text}, secret_files: {relative_path: vault_key}, asset_files: {relative_path: local_path}, directories: [relative_data_subdir], endpoints: [{service,url}], warnings: [str]}`. `render.render_all(config) -> {host_id: bundle}`. Compose bind paths use <runtime_root>/<env>/<deployment>/ for files/secrets/assets and <data_root>/<env>/<deployment>/ for data. Each compose service key is service ID, no container_name. One private data network per dependency, web/backend separate, management separate, uplinks per role. No placeholder plaintext secret or shell interpolation of config. Service commands fixed by kind; files generated with safe escaped validated fields. Ansible receives these bundles unchanged.
 
-CLI: `./setup.sh [wizard|validate|plan|apply|status|logs|stop|backup|restore|doctor|catalog|secrets]`; mandatory environment/deployment for target operations. `plan --config PATH [--check-hosts]` creates local signed artifact with hashes. `apply --plan PATH [--yes]` reloads original source, verifies signature/config/assets fingerprint, does mandatory read-only remote preflight and only then runs apply. No plan file can supply its own executable/playbook. Local state `.state/` permission 0700. Commands may use `--state-dir` alternate controlled local path. Status/logs/stop require previously stored applied config or explicit --config; backup/restore are strongly scoped by host/service, restore isolated only. Exit 0 success,1 execution failed/partial/unknown,2 validation/preflight error,130 interrupted. Output redact by default.
+## Kontrak CLI aktual
+
+Jalankan `./setup.sh --help` dari root repository untuk daftar opsi yang berlaku.
+
+| Operasi | Argumen utama |
+| --- | --- |
+| wizard | `--output PATH` |
+| validate, plan | `CONFIG` sebagai argumen posisi |
+| secrets-init | `--config PATH`, opsional `--vault-password-file PATH` |
+| apply | `--plan PATH --environment NAME --deployment NAME` |
+| preflight, status, logs | `--config PATH`, opsional `--host ID --service ID` |
+| stop | `--config PATH --host ID --service ID --yes` |
+| backup | `--config PATH --host ID --service ID --backup-id ID --destination PATH --recipient AGE` |
+| restore | `--config PATH --host ID --service ID --archive PATH --identity-file PATH` |
+
+`--state-dir PATH` adalah opsi global sebelum nama operasi. State default memakai
+direktori privat user; lihat `state.py` untuk lokasi aktual. Plan mencatat identitas
+konfigurasi dan fingerprint asset, lalu diverifikasi ulang sebelum apply. Jangan
+menambahkan `plan --config`, `--check-hosts` atau `apply --yes`: opsi tersebut tidak
+tersedia. Preflight remote menjadi bagian apply, bukan opsi untuk melewatinya.
 
 ## Ansible interface
 
 Root executor writes temporary inventory JSON and vars JSON (mode0600) then uses subprocess argv, no shell. `ansible/preflight.yml`, `ansible/operate.yml` entrypoints, `ansible/ansible.cfg`, requirements pinned collection. Vars: `dd_environment`, `dd_deployment`, `dd_operation` (apply,status,logs,stop,backup,restore), `dd_run_id` safe slug, `dd_hosts` config hosts, `dd_bundles` rendered per-host, `dd_services` normalized services, `dd_secrets` decrypted Vault mapping, `dd_selected_services` list IDs (empty=all), `dd_backup` optional operation settings. Host inventory_hostname equals host ID. Inventory connection vars supplied by root. Runtime/data roots derived on target. preflight must not mutate host; localhost temp/cache okay. Validate Ubuntu24 amd64 SSH/sudo paths disk mount, capabilities and firewall provider. operate must lock target before any mutation; shared host lock protects overlapping deployments and bootstrap, release only owned locks. Reconcile stale locks, never delete by age. No down-v/prune; no destructive restore active data; no arbitrary remote command from input. Status/logs capture and return markers or fetched result path safe to parse; failed/unreachable -> nonzero.
 
-## Ownership during development
+## Integrasi infrastructure existing
 
-Core worker: config.py, errors.py, core validation helper modules, tests/test_config*.py.
-Renderer worker: render.py, rendering helper modules, catalog/, tests/test_render*.py.
-Ansible worker: ansible/ (including remote helper scripts and tests under ansible/tests). Read generator/validator skill instructions. Do not own root CLI/state.
-Root: packaging, setup.sh, CLI/wizard, plan/state/executor/secrets/backup adapters if outside ansible, examples, docs, shared tests and integration. No worker reverts another's edits.
+`infrastructure/scripts/manage.py` merupakan sumber operasi stack shared.
+`make infra-*` mendelegasikan ke Makefile infrastructure; playbook
+`ansible/infrastructure.yml` memanggil manager yang sama pada checkout target.
+Kontrak `dd_*` di atas hanya untuk controller dynamic. Jangan meneruskan vars
+`infra_*` ke operate.yml atau menganggap stack shared memiliki gate dynamic.
+
+Referensi implementasi: `src/dynamic_deployment/cli.py`, `executor.py`, `state.py`
+dan `ansible/files/guard.py`. Perubahan kontrak harus disertai perubahan tes yang
+memeriksa perilaku terkait.

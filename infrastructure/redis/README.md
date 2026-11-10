@@ -1,5 +1,7 @@
 # Redis Cache
 
+[Beranda](../../README.md) · [Indeks dokumentasi](../../docs/README.md)
+
 Redis adalah cache bersama pada `shared-network`. Ia tidak terhubung langsung ke
 PostgreSQL atau MariaDB; aplikasi yang mengelola alurnya:
 
@@ -32,10 +34,14 @@ Redis dikonfigurasi sebagai cache ephemeral: data hilang saat container restart.
 yang paling jarang dipakai saat batas tercapai. Ini melindungi RAM host tanpa
 menetapkan limit CPU atau RAM Docker.
 
-Untuk eksperimen local:
+Untuk eksperimen local, jalankan dari root repository:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+make infra-check ENV=local SERVICES=redis
+make infra-up ENV=local SERVICES=redis
 ```
 
 Port local hanya tersedia di `127.0.0.1:6379`.
+
+Redis pada alur dynamic berbeda: persistensi dan isolasi mengikuti konfigurasi
+controller. Jangan mengarahkan queue/session persisten ke cache existing ini.

@@ -1,4 +1,9 @@
-# Validation Report
+# Laporan validasi infrastructure sebelum integrasi
+
+[Beranda](../README.md) · [Indeks dokumentasi](../docs/README.md)
+
+Laporan historis ini mencatat kondisi alat saat pemeriksaan awal. Hasil sesudah
+penggabungan tersedia di [laporan integrasi](../docs/integration-validation.md).
 
 **Result:** PARTIAL
 **Errors:** 0 pada pemeriksaan yang selesai
@@ -38,7 +43,7 @@ No — mbake unavailable in current environment. Recipe ditulis menggunakan tab.
 # Dockerfile Validation Report
 
 Target: postgres/Dockerfile.
-Command: `bash /home/rafi/.codex/skills/dockerfile-validator/scripts/dockerfile-validate.sh /mnt/d/project_local/makefile-devops/Infrastructure/postgres/Dockerfile`
+Command: `bash /home/rafi/.codex/skills/dockerfile-validator/scripts/dockerfile-validate.sh /mnt/d/project_local/dynamic_deployment/infrastructure/postgres/Dockerfile`
 Overall: PARTIAL. Script exit 127 karena venv gagal (ensurepip tidak tersedia).
 Fallback statis: versi base eksplisit melalui ARG, WORKDIR inherited dari official
 image, tidak ada credential literal, exec/privilege drop inherited dari official

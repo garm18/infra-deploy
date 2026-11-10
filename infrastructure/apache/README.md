@@ -1,29 +1,32 @@
-# Apache reverse proxy
+# Apache reverse proxy existing
 
-HTTP origin behind a TLS proxy/load balancer, using `httpd:2.4.68-alpine`.
-Active virtual hosts live in `sites-enabled/`; source files can live in
-`sites-available/`. Set the `ServerName` in every enabled vhost before deployment.
-The ELRT staging vhost forwards `/elrt/` to `e-lrt-app:80`; every backend must
-join the external `shared-network`. Unknown hostnames are denied. Restrict origin
-ingress to your proxy/load balancer.
+[Beranda](../../README.md) · [Indeks dokumentasi](../../docs/README.md)
+
+Apache memakai `httpd:2.4.68-alpine` sebagai HTTP origin di belakang TLS load
+balancer/proxy. Host port 8081 diteruskan ke port container 80. Batasi akses origin
+ke load balancer yang dipercaya. Konfigurasi ini tidak mengaktifkan HTTPS langsung.
+
+## Siapkan virtual host
+
+Review ServerName dan upstream pada sites-enabled/. File sumber tersedia di
+sites-available/. Upstream aplikasi harus bergabung ke shared-network. Vhost
+staging meneruskan /elrt/ ke e-lrt-app:80; header forwarded HTTPS mengasumsikan TLS
+diterminasi upstream. Sesuaikan dengan jalur traffic sebenarnya.
+
+## Jalankan dan periksa
+
+Dari root repository:
 
 ```bash
-docker network create shared-network # once, if absent
-docker compose config --quiet
-docker compose up -d
+make infra-check ENV=local SERVICES=apache
+make infra-up ENV=local SERVICES=apache
+make infra-ps ENV=local SERVICES=apache
 ```
 
-The service exposes host port 8081 to container port 80. The sample virtual host
-forwards `X-Forwarded-Proto: https` and port 443 because TLS terminates at a
-trusted upstream load balancer. The local override keeps the same port on
-`127.0.0.1`:
+Local hanya membuka 127.0.0.1:8081. Untuk server tujuan, gunakan ENV=staging atau
+production sesudah review domain, network dan firewall. Sebelum restart konfigurasi,
+jalankan `docker compose exec proxy-apache httpd -t` dari direktori layanan.
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
-```
-
-Health uses a static endpoint on container loopback port 8083, independent of the
-application. Logs go to stdout/stderr and Docker uses its daemon default logging
-policy. Validate changes with `docker compose exec proxy-apache httpd -t` before
-restarting. The `ssl/` directory is reserved; this configuration does not enable
-direct HTTPS.
+Probe loopback container port 8083 hanya memeriksa proxy hidup, bukan aplikasi.
+Uji URL aplikasi terpisah. Log stdout/stderr dirotasi Docker: 10 MB per file,
+maksimum tiga file. Direktori ssl/ disediakan untuk aset lokal sesuai konfigurasi.

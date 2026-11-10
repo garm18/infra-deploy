@@ -1,5 +1,7 @@
 # Satu workspace deployment
 
+[Beranda](../README.md) · [Indeks dokumentasi](README.md)
+
 `dynamic_deployment/` sekarang menjadi folder utama. Stack dari `makefile-devops/`
 dipindahkan utuh ke `infrastructure/`, termasuk file tersembunyi. Tidak ada data
 atau credential yang dimigrasikan ke container. Arsip asli dan data existing tetap

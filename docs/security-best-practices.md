@@ -1,5 +1,12 @@
 # Security best practices
 
+[Beranda](../README.md) · [Indeks dokumentasi](README.md)
+
+Ditujukan untuk operator dan reviewer sebelum staging/production. Tabel berikut
+adalah catatan risiko audit, bukan daftar perbaikan yang telah terbukti selesai.
+Konfirmasi kondisi kode dan bukti runtime terbaru sebelum menyatakan temuan ditutup.
+Untuk cakupan penggabungan terbaru lihat [laporan integrasi](integration-validation.md).
+
 Dokumen ini adalah hasil audit statis terhadap controller Python, renderer Docker
 Compose, dan executor Ansible. Audit tidak menjalankan deployment pada host nyata.
 

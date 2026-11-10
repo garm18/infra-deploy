@@ -1,46 +1,36 @@
-# MinIO Community
+# MinIO Community existing
 
-This service uses the Quay image
-`quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z`. It is pinned to keep the
-legacy full Console GUI for bucket, user, access-key, and policy administration.
-The Console listens on internal port 9001; the S3 API listens on internal port
-9000.
+[Beranda](../../README.md) · [Indeks dokumentasi](../../docs/README.md)
 
-## Configure
+Compose memakai `minio/minio:RELEASE.2025-04-22T22-12-26Z`. Release ini dipertahankan
+untuk kompatibilitas Console existing, bukan rekomendasi versi terbaru. Profil
+MinIO dynamic memakai AIStor dan persyaratan berbeda; jangan menukar image langsung.
 
-Copy `.env.example` to `.env` and set a unique root user and password. Keep
-`MINIO_DATA_DIR` on persistent host storage. Set `MINIO_BROWSER_REDIRECT_URL` to
-the external Console URL when using HTTPS through `proxy-nginx`.
+## Siapkan konfigurasi
 
-```bash
-docker network create shared-network # once, if absent
-docker compose config --quiet
-docker compose up -d --wait
-```
+Dari root repository jalankan `make infra-init SERVICES=minio`. File .env existing
+tidak ditimpa. Edit `infrastructure/minio/.env`: gunakan root user/password unik,
+MINIO_DATA_DIR pada storage persisten dan MINIO_BROWSER_REDIRECT_URL sesuai URL
+Console bila menggunakan proxy. Aplikasi memakai access key dengan hak minimum.
 
-## Console and S3 access
+## Jalankan
 
-MinIO has no published host ports. Enable the template at
-`../proxy-nginx/sites-available/minio.conf` after replacing its two example
-domains:
-
-- S3 API hostname routes to `minio-storage:9000`.
-- Console hostname routes to `minio-storage:9001`.
-
-Set `MINIO_BROWSER_REDIRECT_URL` to the final Console hostname. The proxy template
-preserves S3 request semantics, disables upload buffering, and forwards Console
-WebSocket connections.
-
-This release is intentionally frozen for GUI compatibility. Test upgrades and
-migration before changing the image tag. Use scoped access keys for applications;
-reserve root credentials for administration and recovery.
-
-## Local experiment
-
-Combine the base file with `docker-compose.local.yml` to use a disposable named
-volume and expose the S3 API and Console only on `127.0.0.1:9000` and
-`127.0.0.1:9001`:
+Semua perintah berikut dari root repository:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+make infra-check ENV=local SERVICES=minio
+make infra-up ENV=local SERVICES=minio
+make infra-ps ENV=local SERVICES=minio
 ```
+
+Local memakai named volume dan port 127.0.0.1:9000 untuk S3, 9001 untuk Console.
+Untuk staging/production, siapkan bind mount lalu ganti ENV sesuai server tujuan.
+Compose base tidak mempublish port MinIO ke host.
+
+## Akses melalui proxy
+
+Template `../proxy-nginx/sites-available/minio.conf` belum aktif. Isi hostname
+S3 dan Console yang berbeda, lalu aktifkan di sites-enabled sesuai kebutuhan.
+Upstream S3 adalah minio-storage:9000; Console minio-storage:9001. Set redirect URL
+ke hostname Console final. Uji upload/download, autentikasi IAM, Console dan
+restore sebelum perubahan image atau cutover.

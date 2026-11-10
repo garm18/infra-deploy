@@ -1,5 +1,11 @@
 # Bukti kelayakan release
 
+[Beranda](../README.md) · [Indeks dokumentasi](README.md)
+
+Gunakan panduan ini setelah pengujian staging menghasilkan bukti nyata. Evidence
+bukan konfigurasi deployment dan tidak dibuat otomatis dengan mengisi semua checks
+menjadi true. Ikuti [automation](automation.md) untuk urutan plan/apply.
+
 Validasi konfigurasi dan unit test bukan bukti bahwa image, jaringan, atau restore sudah berhasil pada server nyata. Production membutuhkan bukti operator setelah pengujian pada staging yang representatif. Berkas approval merupakan input tepercaya yang harus dilindungi melalui izin file dan proses review; validator ini tidak menyediakan tanda tangan digital atau membuktikan kebenaran pernyataan operator.
 
 ## Format evidence

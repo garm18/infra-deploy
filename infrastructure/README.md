@@ -1,5 +1,7 @@
 # Shared infrastructure — production runbook
 
+[Beranda](../README.md) · [Indeks dokumentasi](../docs/README.md)
+
 Konfigurasi single-host Docker Compose untuk PostgreSQL, MariaDB, Redis, MinIO,
 Nginx, dan Apache. Semua layanan dikelola dari subfolder masing-masing. Ini bukan
 cluster HA: kerusakan host/storage tetap menyebabkan downtime. Tidak ada deploy,
@@ -52,14 +54,14 @@ rotasi credential, atau migrasi data yang dijalankan saat file ini diperbarui.
    certificate/key ke `ssl/` bila HTTPS di-terminate oleh Nginx; lihat
    [runbook Nginx](proxy-nginx/README.md).
 6. Ikuti [runbook MinIO](minio/README.md) untuk Console GUI dan konfigurasi proxy.
-7. Jalankan preflight dari folder `Infrastructure`:
+7. Jalankan preflight dari folder `dynamic_deployment/infrastructure`:
 
 ```bash
 python3 scripts/preflight.py --mode production postgres mariadb redis proxy-nginx
 python3 scripts/preflight.py --mode production minio
 ```
 
-Replace `proxy-nginx` with `apache` when Apache is the selected proxy.
+Ganti `proxy-nginx` dengan `apache` bila itu proxy yang digunakan.
 
 Preflight memeriksa credential placeholder, direktori bind mount, dan `docker compose config --quiet`. Ia tidak membuktikan konektivitas, IAM, backup, firewall, ataupun kondisi disk mount.
    Hindari membagikan output `docker compose config` tanpa `--quiet`: credential
@@ -128,8 +130,8 @@ production pada Docker daemon yang sama.
 
 - Redis dipakai sebagai cache ephemeral. `REDIS_MAXMEMORY` membatasi ukuran cache
   dan `allkeys-lfu` membuang key yang paling jarang dipakai saat batas tercapai.
-- Semua service menggunakan logging driver default Docker. Atur retensi dan
-  pengiriman log pada host atau tambahkan konfigurasi logging ketika diperlukan.
+- Semua service memakai `json-file` dengan rotasi 10 MB per file, maksimum
+  tiga file. Siapkan pengiriman log terpusat sesuai kebutuhan.
 - Backup PostgreSQL memakai dump/base backup yang konsisten; MariaDB memakai
   mariadb-dump/mariadb-backup yang kompatibel. Simpan off-host terenkripsi,
   tetapkan retensi/RPO/RTO, dan uji restore terisolasi berkala. Snapshot direktori

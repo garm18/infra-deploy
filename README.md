@@ -1,7 +1,37 @@
 # Dynamic Deployment
 
-Stack `makefile-devops` kini berada di `infrastructure/`. Gunakan satu Makefile
-utama; lihat [panduan integrasi Make dan Ansible](docs/integration.md).
+Workspace ini menyediakan dua alur. Pilih alur sebelum menjalankan perintah:
+
+| Kebutuhan | Perintah awal | Panduan |
+| --- | --- | --- |
+| Deployment baru, konfigurasi per environment, Vault dan plan/apply | `make help` | [Automation](docs/automation.md) |
+| Mengelola container shared yang sudah ada | `make infra-help` | [Infrastructure](infrastructure/QUICKSTART.md) |
+| Menjalankan stack existing melalui SSH/Ansible | `make infra-ansible` dengan inventory dan vars | [Integrasi](docs/integration.md) |
+
+Semua perintah `make` pada panduan utama dijalankan dari root `dynamic_deployment/`.
+`CONFIG`, `PLAN`, `INVENTORY` dan path lainnya adalah file milik operator; ganti
+contoh `/path/...` sesuai lokasi Anda. Jangan menyalin contoh digest sebagai image
+siap deploy.
+
+Struktur folder:
+
+```text
+dynamic_deployment/
+├── Makefile          # entrypoint Make untuk kedua alur
+├── setup.sh          # CLI dynamic
+├── src/              # validasi, render, plan, state dan executor
+├── ansible/          # playbook dan helper remote
+├── catalog/          # kontrak layanan dynamic
+├── templates/        # template build aplikasi
+├── infrastructure/   # stack shared existing beserta data lokal yang diabaikan Git
+├── tests/            # tes controller dan integrasi
+└── docs/             # panduan dan laporan validasi
+```
+
+[Indeks dokumentasi](docs/README.md) memisahkan panduan penggunaan, referensi
+pengembang dan laporan pemeriksaan. Menggabungkan folder tidak memigrasikan data:
+Redis, MinIO dan layout PostgreSQL kedua alur berbeda. Baca
+[batas migrasi](docs/integration.md#batas-migrasi) sebelum berpindah alur.
 
 Deploy layanan Docker Compose dengan alur aman dan mudah:
 
@@ -34,10 +64,24 @@ Hasil audit dan gate keamanan sebelum staging/production tersedia di
 
 ## Prasyarat
 
+Siapkan GNU Make, Bash, Python >=3.12, Ansible dan Docker Compose sesuai kebutuhan
+host. Dependency Python controller tercatat di `requirements.txt`. Bila memakai
+virtualenv, pilih filesystem Linux untuk menyimpan environment dan credential.
+Contoh persiapan dependency Python (memerlukan dukungan venv/pip pada OS):
+
+```bash
+python3 -m venv ~/.venvs/dynamic-deployment
+~/.venvs/dynamic-deployment/bin/python -m pip install -r requirements.txt
+export DD_PYTHON=~/.venvs/dynamic-deployment/bin/python
+```
+
+Perintah tersebut dijalankan dari root repository. Dependency Ansible dan akses
+Docker diperiksa terpisah; `make doctor` tidak memasang paket otomatis.
+
 Masuk ke direktori project dan jalankan pemeriksaan controller:
 
 ```bash
-cd /mnt/d/project_local/dynamic_deployment
+cd /path/to/dynamic_deployment
 ./setup.sh doctor
 ```
 
@@ -276,7 +320,7 @@ Database dan MinIO tidak dipublish secara default. Remote PostgreSQL dan MinIO w
 
 ## MinIO full GUI
 
-Full GUI administrasi memerlukan **MinIO AIStor Free**:
+Pada alur dynamic, profil GUI administrasi menggunakan **MinIO AIStor Free**:
 
 - Image: `quay.io/minio/aistor/minio`
 - License operator
@@ -284,7 +328,7 @@ Full GUI administrasi memerlukan **MinIO AIStor Free**:
 - Nginx admin proxy
 - Akses hanya dari internal network atau VPN
 
-Apply MinIO memerlukan evidence yang belum kedaluwarsa untuk runtime, network, GUI, serta authenticated S3 write/read/delete probe. MinIO Community tidak diklaim memiliki full admin GUI.
+Apply MinIO memerlukan evidence yang belum kedaluwarsa untuk runtime, network, GUI, serta authenticated S3 write/read/delete probe. Stack existing di `infrastructure/minio` memakai release Community berbeda; lihat runbook layanan tersebut. Jangan mengganti image antar alur tanpa rencana migrasi.
 
 ---
 

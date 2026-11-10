@@ -1,5 +1,11 @@
 # Validation Report — integrasi 2026-11-10
 
+[Beranda](../README.md) · [Indeks dokumentasi](README.md)
+
+Laporan ini mencatat pemeriksaan pada saat integrasi, bukan status live server.
+Untuk menjalankan sistem gunakan [panduan integrasi](integration.md); untuk
+menangani kegagalan gunakan [pemecahan masalah](troubleshooting.md).
+
 **Result:** PASSED with warnings untuk Make; validasi keseluruhan PARTIAL.
 **Errors:** 0 pada validator Make.
 **Warnings:** 1 per Makefile (pip3/mbake tidak tersedia).

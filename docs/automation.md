@@ -1,12 +1,14 @@
-# Automation: Makefile dahulu, Ansible berikutnya
+# Automation dengan Make dan Ansible
 
-Panduan ini mengikuti [PRD Dynamic Deployment](../../planning_prd_dynamic_deployment/00-PRD-Index.md).
-Tahap pertama menyediakan Makefile sebagai pintasan untuk setup, deployment,
-status/logs, stop, dan pengujian melalui `setup.sh` serta tool uji yang sudah ada.
-Backup dan restore tetap menggunakan CLI `./setup.sh`; wrapper keduanya belum
-termasuk tahap Makefile ini.
-Tahap kedua menyempurnakan automation Ansible setelah alur Makefile tervalidasi.
-Review security menjadi tahap akhir; pemeriksaan bawaan controller tetap berlaku.
+[Beranda](../README.md) · [Indeks dokumentasi](README.md)
+
+Jalankan perintah dari root `dynamic_deployment/`. Make adalah pintasan untuk CLI;
+CLI memvalidasi konfigurasi dan menyiapkan operasi Ansible. `plan` hanya membuat
+rencana; `apply` menjalankannya setelah target dan preflight sesuai.
+
+Panduan ini membahas deployment dynamic. Untuk container shared existing gunakan
+[infra-* dan playbook infrastructure](integration.md). Backup dan restore dynamic
+memakai `./setup.sh`; target Make khusus keduanya belum tersedia.
 
 ## Batas tanggung jawab
 
@@ -22,7 +24,7 @@ Aturan layanan tetap berada di katalog/controller, bukan diduplikasi dalam Makef
 `plan` tidak otomatis menjalankan `apply`. Jalankan satu target operasional setiap kali,
 tanpa `make -j`, agar urutan dapat ditinjau.
 
-Referensi `/mnt/d/DevOps/apps/infrastructure` digunakan untuk pola pemeriksaan
+Stack `infrastructure/` digunakan untuk pola pemeriksaan
 Compose sebelum startup, healthcheck, pemisahan data dan konfigurasi, serta
 dependency database sebelum aplikasi. `/mnt/data/postgres` dan `shared-network`
 adalah contoh milik referensi, bukan nilai yang perlu dimasukkan ke wizard proyek
@@ -65,14 +67,14 @@ hasilnya `/mnt/data/dynamic-deployment/staging/demo/` dan
 dan deployment ditambahkan controller. Direktori data existing dari referensi
 infrastructure tidak otomatis diadopsi atau dipindahkan.
 
-## Jalankan tahap Makefile
+## Jalankan deployment dynamic
 
 Prasyarat: GNU Make, Bash, Python sesuai `pyproject.toml`, dan dependency controller
 pada [README](../README.md#prasyarat). Makefile tidak memasang paket otomatis.
 Mulai dengan satu layanan PostgreSQL lokal.
 
 ```bash
-cd /mnt/d/project_local/dynamic_deployment
+cd /path/to/dynamic_deployment
 make help
 make doctor
 make catalog
